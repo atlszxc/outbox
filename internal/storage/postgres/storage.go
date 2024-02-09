@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
+	dtos2 "ot/internal/order/dtos"
 	"ot/internal/outbox/dtos"
 	"ot/internal/outbox/entity"
 	"ot/pkg/logger"
@@ -16,6 +17,23 @@ const (
 type PGStorage struct {
 	Conn   *pgxpool.Pool
 	logger *logger.Logger
+}
+
+func (pgs *PGStorage) CreateOrder(dto dtos2.CreateOrderDto) int {
+	q := `
+		INSERT INTO public."order" (products)
+		VALUES (
+			$1
+		)
+		RETURNING id
+	`
+	var id int
+	err := pgs.Conn.QueryRow(context.TODO(), q, &dto.Products).Scan(&id)
+	if err != nil {
+		pgs.logger.Log(err.Error(), 1)
+		panic(err)
+	}
+	return id
 }
 
 func (pgs *PGStorage) DeleteOutbox(id int) {
@@ -33,16 +51,17 @@ func (pgs *PGStorage) DeleteOutbox(id int) {
 }
 
 func (pgs *PGStorage) CreateOutbox(data dtos.CreateOutboxDto) int {
+	fmt.Println(data.OrderId)
 	defer pgs.Conn.Close()
 	q := `
-		INSERT INTO public.outbox(complete)
-		VALUES ($1)
+		INSERT INTO public.outbox(order_id, complete)
+		VALUES ($1, $2)
 		RETURNING id
 	`
 
 	var id int
 
-	err := pgs.Conn.QueryRow(context.TODO(), q, &data.Complete).Scan(&id)
+	err := pgs.Conn.QueryRow(context.TODO(), q, &data.OrderId, &data.Complete).Scan(&id)
 	if err != nil {
 		pgs.logger.Log(err.Error(), logger.Panic)
 		panic(err)

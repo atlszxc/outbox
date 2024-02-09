@@ -17,9 +17,6 @@ func CreateOutboxHandler(ctx *gin.Context) {
 	st := postgres.GetStorage(postgres.CONNECTION_STRING)
 	id := st.CreateOutbox(data)
 
-	//p := kafka.GetProducer()
-	//p.SendMessage("test", data)
-	//
 	ctx.JSON(http.StatusCreated, gin.H{
 		"id": id,
 	})
