@@ -2,7 +2,10 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"os"
+	"ot/pkg/logger"
 )
 
 const (
@@ -18,7 +21,18 @@ const (
 )
 
 type Server struct {
-	S *gin.Engine
+	S      *gin.Engine
+	Port   int
+	logger *logger.Logger
+}
+
+func (s *Server) Start() {
+	runStr := fmt.Sprintf(":%d", s.Port)
+	err := s.S.Run(runStr)
+	if err != nil {
+		s.logger.Log(err.Error(), logger.Fatal)
+		os.Exit(1)
+	}
 }
 
 func (s *Server) AddRoute(method string, path string, handler gin.HandlerFunc) error {
@@ -32,16 +46,23 @@ func (s *Server) AddRoute(method string, path string, handler gin.HandlerFunc) e
 	case DELETE:
 		s.S.DELETE(path, handler)
 	default:
-		return errors.New("Can not create route")
+		{
+			s.logger.Log("Can not create route", logger.Fatal)
+			return errors.New("Can not create route")
+		}
 	}
 
 	return nil
 }
 
-func NewServer(mode string) *Server {
+func NewServer(mode string, port int) *Server {
 	gin.SetMode(mode)
 
 	return &Server{
-		S: gin.Default(),
+		S:    gin.Default(),
+		Port: port,
+		logger: &logger.Logger{
+			Tag: "Server",
+		},
 	}
 }
